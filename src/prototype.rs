@@ -2,15 +2,14 @@ use std::{any::TypeId, collections::BTreeMap};
 
 use crate::component::Component;
 
+#[derive(Default)]
 pub struct Prototype {
-    pub components: BTreeMap<TypeId, Box<dyn Component>>,
+    pub(super) components: BTreeMap<TypeId, Box<dyn Component>>,
 }
 
 impl Prototype {
     pub fn new() -> Self {
-        Self {
-            components: BTreeMap::new(),
-        }
+        Self::default()
     }
 
     pub fn with<T: Component + 'static>(mut self, component: T) -> Self {

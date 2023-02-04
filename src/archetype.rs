@@ -6,6 +6,7 @@ use std::{
 
 use crate::prototype::Prototype;
 
+#[derive(Default)]
 pub struct Archetype {
     columns: HashMap<TypeId, Box<RwLock<dyn UntypedColumn>>>,
     entries: Vec<ArchetypeEntry>,
@@ -52,11 +53,7 @@ pub struct ArchetypeEntry {
 
 impl Archetype {
     pub fn new() -> Self {
-        Self {
-            columns: HashMap::new(),
-            entries: Vec::new(),
-            free_list: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn push(&mut self, prototype: Prototype) -> ArchetypeEntry {

@@ -1,7 +1,7 @@
 use std::{
     any::{Any, TypeId},
     collections::{BTreeSet, HashMap},
-    sync::{RwLock},
+    sync::RwLock,
 };
 
 use crate::{
@@ -12,6 +12,7 @@ use crate::{
     system::System,
 };
 
+#[derive(Default)]
 pub struct World {
     data: HashMap<DataKind, Box<dyn Any>>,
 }
@@ -24,9 +25,7 @@ pub enum DataKind {
 
 impl World {
     pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn insert_resource<T: Any + Send>(&mut self, resource: T) {
