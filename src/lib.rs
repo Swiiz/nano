@@ -21,7 +21,7 @@
 //!
 //! fn main() {
 //!   // Create a new ressources container
-//!   let mut resources = Ressources::new();
+//!   let mut resources = Resources::new();
 //!   // Insert a resource into the container
 //!   resources.insert(AtomicUsize::new(0));
 //!   
