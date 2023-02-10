@@ -1,0 +1,20 @@
+use std::any::Any;
+
+use super::archetypes::Column;
+
+pub trait Component: 'static {
+    fn make_column(&self) -> Box<dyn Column>;
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any>;
+}
+impl<T> Component for T
+where
+    T: Send + Sync + 'static,
+{
+    fn make_column(&self) -> Box<dyn Column> {
+        Box::new(Vec::<T>::new())
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}

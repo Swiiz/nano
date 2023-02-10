@@ -17,14 +17,19 @@
 //! ```rust
 //! use std::sync::atomic::AtomicUsize;
 //!
-//! use nano::{
-//!   resources::{Res, Ressources},  
-//!   systems::executor::ParallelExecutor,
-//! };
+//! use nano::prelude::*;
 //!
 //! fn main() {
+//!   // Create a new ressources container
 //!   let mut resources = Ressources::new();
+//!   // Insert a resource into the container
 //!   resources.insert(AtomicUsize::new(0));
+//!   
+//!   // Create a new executor and add a system to it
+//!   // We could also use test_sys.run(&resources) directly
+//!   let ex = ParallelExecutor::new().with(&test_sys);
+//!   
+//!   ex.run(&resources);
 //! }
 //!
 //! fn test_sys(counter: Res<AtomicUsize>) {
@@ -38,12 +43,13 @@
 #![warn(missing_docs)]
 
 pub mod resources;
+pub mod runtime;
 pub mod systems;
 pub mod world;
 
 /// An easy way to import all the types you might need in a classic use case.
 pub mod prelude {
-    pub use crate::resources::{Res, ResMut, Ressources, TLRes, TLResMut, TLRessources};
+    pub use crate::resources::{Res, ResMut, Resources, TLRes, TLResMut, TLResources};
     pub use crate::systems::executor::{ParallelExecutor, SequentialExecutor};
     //TODO: pub use crate::world::{Archetype, Archetypes, Entity, World};
 }

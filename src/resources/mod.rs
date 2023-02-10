@@ -28,17 +28,17 @@ use std::{
 use crate::systems::Provider;
 
 /// A thread-local container for resources.
-pub struct TLRessources {
+pub struct TLResources {
     resources: HashMap<TypeId, Box<dyn Any>>,
 }
 
 #[cfg(feature = "parallel")]
 /// A container for resources.
-pub struct Ressources {
+pub struct Resources {
     resources: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
 }
 
-impl TLRessources {
+impl TLResources {
     /// Creates a new `TLRessources`.
     pub fn new() -> Self {
         Self {
@@ -84,7 +84,7 @@ impl TLRessources {
 }
 
 #[cfg(feature = "parallel")]
-impl Ressources {
+impl Resources {
     /// Creates a new `Ressources`.
     pub fn new() -> Self {
         Self {
@@ -253,25 +253,25 @@ impl<'a, T: 'a> DerefMut for TLResMut<'a, T> {
     }
 }
 
-impl<'a, T: 'static + Send + Sync> Provider<'a, Res<'a, T>> for Ressources {
+impl<'a, T: 'static + Send + Sync> Provider<'a, Res<'a, T>> for Resources {
     fn provide(&'a self) -> Res<'a, T> {
         self.get().expect("Failed to get resource")
     }
 }
 
-impl<'a, T: 'static + Send + Sync> Provider<'a, ResMut<'a, T>> for Ressources {
+impl<'a, T: 'static + Send + Sync> Provider<'a, ResMut<'a, T>> for Resources {
     fn provide(&'a self) -> ResMut<'a, T> {
         self.get_mut().expect("Failed to get resource")
     }
 }
 
-impl<'a, T: 'static> Provider<'a, TLRes<'a, T>> for TLRessources {
+impl<'a, T: 'static> Provider<'a, TLRes<'a, T>> for TLResources {
     fn provide(&'a self) -> TLRes<'a, T> {
         self.get().expect("Failed to get resource")
     }
 }
 
-impl<'a, T: 'static> Provider<'a, TLResMut<'a, T>> for TLRessources {
+impl<'a, T: 'static> Provider<'a, TLResMut<'a, T>> for TLResources {
     fn provide(&'a self) -> TLResMut<'a, T> {
         self.get_mut().expect("Failed to get resource")
     }

@@ -1,12 +1,12 @@
 use std::sync::atomic::AtomicUsize;
 
 use nano::{
-    resources::{Res, Ressources},
+    resources::{Res, Resources},
     systems::executor::ParallelExecutor,
 };
 
 fn main() {
-    let mut resources = Ressources::new();
+    let mut resources = Resources::new();
     resources.insert(AtomicUsize::new(0));
 
     let ex = ParallelExecutor::new().with(&test_sys);
