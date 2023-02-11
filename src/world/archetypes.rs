@@ -108,26 +108,28 @@ impl Archetype {
         self.entities[entry.index].generation == entry.generation
     }
 
-    pub fn get_column<'a, T: Component>(&'a self) -> RwLockReadGuard<'a, Vec<T>> {
-        self.columns
-            .get(&TypeId::of::<T>())
-            .unwrap()
-            .as_any()
-            .downcast_ref::<RwLock<Vec<T>>>()
-            .unwrap()
-            .try_read()
-            .expect("Column already borrowed")
+    pub fn get_column<'a, T: Component>(&'a self) -> Option<RwLockReadGuard<'a, Vec<T>>> {
+        Some(
+            self.columns
+                .get(&TypeId::of::<T>())?
+                .as_any()
+                .downcast_ref::<RwLock<Vec<T>>>()
+                .unwrap()
+                .try_read()
+                .expect("Column already borrowed"),
+        )
     }
 
-    pub fn get_column_mut<'a, T: Component>(&'a self) -> RwLockWriteGuard<'a, Vec<T>> {
-        self.columns
-            .get(&TypeId::of::<T>())
-            .unwrap()
-            .as_any()
-            .downcast_ref::<RwLock<Vec<T>>>()
-            .unwrap()
-            .try_write()
-            .expect("Column already borrowed")
+    pub fn get_column_mut<'a, T: Component>(&'a self) -> Option<RwLockWriteGuard<'a, Vec<T>>> {
+        Some(
+            self.columns
+                .get(&TypeId::of::<T>())?
+                .as_any()
+                .downcast_ref::<RwLock<Vec<T>>>()
+                .unwrap()
+                .try_write()
+                .expect("Column already borrowed"),
+        )
     }
 }
 

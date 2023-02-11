@@ -3,7 +3,7 @@
 //! A prototype can thus be used to create an entity.
 
 use std::{
-    any::{Any, TypeId},
+    any::TypeId,
     collections::{HashMap, HashSet},
 };
 

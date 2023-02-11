@@ -49,7 +49,9 @@ pub mod world;
 
 /// An easy way to import all the types you might need in a classic use case.
 pub mod prelude {
-    pub use crate::resources::{Res, ResMut, Resources, TLRes, TLResMut, TLResources};
-    pub use crate::systems::executor::{ParallelExecutor, SequentialExecutor};
+    pub use crate::{
+        resources::{Res, ResMut, Resources, TLRes, TLResMut, TLResources},
+        systems::executor::{ParallelExecutor, SequentialExecutor},
+    };
     //TODO: pub use crate::world::{Archetype, Archetypes, Entity, World};
 }

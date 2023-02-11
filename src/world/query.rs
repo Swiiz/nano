@@ -11,7 +11,6 @@ use std::{
     any::TypeId,
     collections::HashSet,
     marker::PhantomData,
-    slice::SliceIndex,
     sync::{RwLockReadGuard, RwLockWriteGuard},
 };
 
@@ -46,17 +45,33 @@ impl<'a, T: Component> QueryPredicate for &'a mut T {
         layout.contains(&TypeId::of::<T>())
     }
 }
+impl<'a, T: Component> QueryPredicate for Option<&'a T> {
+    fn matches(_layout: &HashSet<TypeId>) -> bool {
+        true
+    }
+}
+impl<'a, T: Component> QueryPredicate for Option<&'a mut T> {
+    fn matches(_layout: &HashSet<TypeId>) -> bool {
+        true
+    }
+}
 impl<'a, T: Component> QueryItem<'a> for &'a T {
     type ColumnsAccessor = RwLockReadGuard<'a, Vec<T>>;
 }
 impl<'a, T: Component> QueryItem<'a> for &'a mut T {
     type ColumnsAccessor = RwLockWriteGuard<'a, Vec<T>>;
 }
+impl<'a, T: Component> QueryItem<'a> for Option<&'a T> {
+    type ColumnsAccessor = Option<RwLockReadGuard<'a, Vec<T>>>;
+}
+impl<'a, T: Component> QueryItem<'a> for Option<&'a mut T> {
+    type ColumnsAccessor = Option<RwLockWriteGuard<'a, Vec<T>>>;
+}
 
 impl<'a, T: Component> ColumnsAccessor<'a> for RwLockReadGuard<'a, Vec<T>> {
     type Item = &'a T;
     fn resolve(archetype: &'a Archetype) -> Self {
-        archetype.get_column::<T>()
+        archetype.get_column::<T>().unwrap()
     }
     unsafe fn get(&mut self, index: usize) -> Self::Item {
         &*(&self[index] as *const T)
@@ -69,13 +84,39 @@ impl<'a, T: Component> ColumnsAccessor<'a> for RwLockReadGuard<'a, Vec<T>> {
 impl<'a, T: Component> ColumnsAccessor<'a> for RwLockWriteGuard<'a, Vec<T>> {
     type Item = &'a mut T;
     fn resolve(archetype: &'a Archetype) -> Self {
-        archetype.get_column_mut()
+        archetype.get_column_mut().unwrap()
     }
     unsafe fn get(&mut self, index: usize) -> Self::Item {
         &mut *(&mut self[index] as *mut T)
     }
     fn size(&self) -> usize {
         self.len()
+    }
+}
+
+impl<'a, T: Component> ColumnsAccessor<'a> for Option<RwLockReadGuard<'a, Vec<T>>> {
+    type Item = Option<&'a T>;
+    fn resolve(archetype: &'a Archetype) -> Self {
+        archetype.get_column::<T>()
+    }
+    unsafe fn get(&mut self, index: usize) -> Self::Item {
+        self.as_ref().map(|c| &*(&c[index] as *const T))
+    }
+    fn size(&self) -> usize {
+        self.as_ref().map(|c| c.len()).unwrap_or(0)
+    }
+}
+
+impl<'a, T: Component> ColumnsAccessor<'a> for Option<RwLockWriteGuard<'a, Vec<T>>> {
+    type Item = Option<&'a mut T>;
+    fn resolve(archetype: &'a Archetype) -> Self {
+        archetype.get_column_mut()
+    }
+    unsafe fn get(&mut self, index: usize) -> Self::Item {
+        self.as_mut().map(|c| &mut *(&mut c[index] as *mut T))
+    }
+    fn size(&self) -> usize {
+        self.as_ref().map(|c| c.len()).unwrap_or(0)
     }
 }
 
@@ -124,7 +165,15 @@ macro_rules! _impl {
                 ($($t::get(&mut self.$idx, index)),*)
             }
             fn size(&self) -> usize {
-                self.0.size()
+                // Longest column
+                let mut size = 0;
+                $(
+                    let s = $t::size(&self.$idx);
+                    if s > size {
+                        size = s;
+                    }
+                )*
+                size
             }
         }
     };
@@ -147,7 +196,7 @@ pub struct Query<'a, I: QueryItem<'a>, P: QueryPredicate = ()> {
 
 impl<'a, I: QueryItem<'a>, P: QueryPredicate> Query<'a, I, P> {
     pub(crate) fn new(archetypes: &'a Vec<Archetype>) -> Self {
-        Self {
+        let r = Self {
             _marker: std::marker::PhantomData,
             columns: archetypes
                 .into_iter()
@@ -155,7 +204,8 @@ impl<'a, I: QueryItem<'a>, P: QueryPredicate> Query<'a, I, P> {
                 .map(|archetype| I::ColumnsAccessor::resolve(archetype))
                 .collect(),
             current_index: 0,
-        }
+        };
+        r
     }
 }
 
@@ -171,6 +221,7 @@ impl<'a, I: QueryItem<'a>, P: QueryPredicate> Iterator for Query<'a, I, P> {
         let last = self.columns.last_mut().unwrap();
         if index >= last.size() {
             self.columns.pop();
+            self.current_index = 0;
             return self.next();
         }
         self.current_index += 1;
