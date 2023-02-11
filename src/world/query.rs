@@ -228,6 +228,7 @@ impl<'a, I: QueryItem<'a>, P: QueryPredicate> Iterator for Query<'a, I, P> {
 
         Some(unsafe {
             // This is safe because we get every element only once. (Iterator yield each element only once)
+            // Also query is only valid as long as the world is valid so the archetypes are valid.
             last.get(index)
         })
     }

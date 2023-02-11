@@ -21,6 +21,7 @@ pub struct ArchetypeEntry {
 // ArchetypeEntity is used to identify an entity in an archetype.
 // ArchetypeEntry is an entry in the archetype's entity table.
 
+#[derive(Default)]
 pub struct Archetype {
     columns: HashMap<TypeId, Box<dyn Column>>,
     entities: Vec<ArchetypeEntity>,

@@ -6,7 +6,7 @@ pub trait Component: 'static + Send + Sync + Any {
     fn make_column(&self) -> Box<dyn Column>;
     fn as_any_box(self: Box<Self>) -> Box<dyn Any>;
 }
-impl<T> Component for T
+impl<T: Clone> Component for T
 where
     T: Send + Sync + 'static,
 {
