@@ -4,40 +4,38 @@
 
 use std::{
     any::{Any, TypeId},
-    collections::HashSet,
+    collections::{HashMap, HashSet},
 };
 
 use super::component::Component;
 
 /// A prototype for an entity.
 pub struct Prototype {
-    components: Vec<Box<dyn Component>>,
+    components: HashMap<TypeId, Box<dyn Component>>,
 }
 
 impl Prototype {
     /// Creates a new `Prototype`.
     pub fn new() -> Self {
         Self {
-            components: Vec::new(),
+            components: HashMap::new(),
         }
     }
 
     /// Adds a component to the prototype.
     pub fn with<T: Component>(mut self, component: T) -> Self {
-        self.components.push(Box::new(component));
+        self.components
+            .insert(TypeId::of::<T>(), Box::new(component));
         self
     }
 
     /// Returns the current layout of the prototype.
     pub fn layout(&self) -> HashSet<TypeId> {
-        self.components
-            .iter()
-            .map(|component| component.type_id())
-            .collect()
+        self.components.keys().map(|id| *id).collect()
     }
 
     /// Consumes the prototype and returns its components.
     pub(crate) fn components(self) -> Vec<Box<dyn Component>> {
-        self.components
+        self.components.into_values().collect()
     }
 }

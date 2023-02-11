@@ -1,10 +1,19 @@
 //! Work in progress... //TODO: Remove this comment when the module is done.
 
 use self::{archetypes::Archetype, prototype::Prototype};
+use crate::world::archetypes::ArchetypeEntity;
 
-pub(crate) mod archetypes;
+pub mod archetypes;
 pub(crate) mod component;
 pub mod prototype;
+pub mod query;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+/// An entity is a unique identifier for a collection of components.
+pub struct Entity {
+    archetype: u16,
+    entry: ArchetypeEntity,
+}
 
 #[derive(Default)]
 /// A world is a collection of entities.
@@ -67,5 +76,20 @@ impl World {
             archetype.insert(prototype.take().unwrap());
             self.archetypes.push(archetype);
         });
+    }
+
+    /// Returns an iterator over all the entities in the world.
+    pub fn entities(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.archetypes()
+            .iter()
+            .enumerate()
+            .flat_map(|(idx, archetype)| {
+                archetype.entities().map(move |entry| Entity {
+                    archetype: idx
+                        .try_into()
+                        .expect("The maximum number of archetypes has been reached! (u16::MAX)"),
+                    entry,
+                })
+            })
     }
 }

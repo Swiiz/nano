@@ -25,9 +25,9 @@ pub trait System<'a, P, Params> {
 macro_rules! _impl {
     ($($name:ident),*) => {
         #[allow(non_snake_case)]
-        impl<'a, _F, P, $($name),*> System<'a, P, ($($name,)*)> for _F
+        impl<'a, F, P, $($name),*> System<'a, P, ($($name,)*)> for F
         where
-            _F: Fn($($name),*),
+            F: Fn($($name),*),
             $(P: Provider<'a, $name>,)*
             $($name: 'a,)*
         {
@@ -43,11 +43,11 @@ macro_rules! _impl {
     };
 }
 
-_impl!(A);
-_impl!(A, B);
-_impl!(A, B, C);
-_impl!(A, B, C, D);
-_impl!(A, B, C, D, E);
-_impl!(A, B, C, D, E, F);
-_impl!(A, B, C, D, E, F, G);
-_impl!(A, B, C, D, E, F, G, H);
+_impl!(T1);
+_impl!(T1, T2);
+_impl!(T1, T2, T3);
+_impl!(T1, T2, T3, T4);
+_impl!(T1, T2, T3, T4, T5);
+_impl!(T1, T2, T3, T4, T5, T6);
+_impl!(T1, T2, T3, T4, T5, T6, T7);
+_impl!(T1, T2, T3, T4, T5, T6, T7, T8);

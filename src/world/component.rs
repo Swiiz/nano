@@ -1,8 +1,8 @@
-use std::any::Any;
+use std::{any::Any, sync::RwLock};
 
 use super::archetypes::Column;
 
-pub trait Component: 'static {
+pub trait Component: 'static + Send + Sync + Any {
     fn make_column(&self) -> Box<dyn Column>;
     fn as_any_box(self: Box<Self>) -> Box<dyn Any>;
 }
@@ -11,10 +11,10 @@ where
     T: Send + Sync + 'static,
 {
     fn make_column(&self) -> Box<dyn Column> {
-        Box::new(Vec::<T>::new())
+        Box::new(RwLock::new(Vec::<T>::new()))
     }
 
     fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
-        self
+        self as Box<dyn Any>
     }
 }
