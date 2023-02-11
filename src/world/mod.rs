@@ -7,6 +7,10 @@ pub(crate) mod component;
 pub mod prototype;
 
 #[derive(Default)]
+/// A world is a collection of entities.
+/// Each entity is composed of components.
+/// Entities are grouped into archetypes based on their composition.
+/// This allows for efficient storage and retrieval of entities.
 pub struct World {
     archetypes: Vec<Archetype>,
 }
