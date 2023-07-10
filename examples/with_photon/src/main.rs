@@ -41,11 +41,11 @@ impl nano::Game for ExampleWithPhoton {
         })
     }
 
-    fn on(&mut self, context: Context, event: nano::Event) -> nano::Result<()> {
+    fn on(&mut self, context: Context, event: &nano::Event) -> nano::Result<()> {
         match event {
             nano::Event::Draw => {
-                let mut pixels = self.scaling_renderer.get_color_array(&self.graphics);
-                let mut i = 0;
+                let mut pixels = self.scaling_renderer.canvas(&self.graphics);
+                let mut i = context.start.elapsed().as_millis() / 50;
                 // Draw gradient lines
                 for Color { r, g, b, a: _ } in pixels.iter_mut() {
                     i = (i + 1) % 255;
@@ -75,7 +75,7 @@ impl nano::Game for ExampleWithPhoton {
                 self.window.request_redraw();
             }
             nano::Event::CloseRequested { window_id } => {
-                if window_id == self.window.id() {
+                if window_id == &self.window.id() {
                     context.control_flow.set_exit();
                 }
             }
@@ -83,8 +83,8 @@ impl nano::Game for ExampleWithPhoton {
                 window_id,
                 new_size,
             } => {
-                if window_id == self.window.id() {
-                    self.graphics.resize_surface(new_size);
+                if window_id == &self.window.id() {
+                    self.graphics.resize_surface(*new_size);
                 }
             }
         }

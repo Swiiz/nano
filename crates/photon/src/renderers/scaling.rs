@@ -1,5 +1,5 @@
 
-use crate::{Color, Instance, ColorArray};
+use crate::{Color, Instance, Canvas};
 
 pub struct ScalingRenderer2d {
     vertex_buffer: wgpu::Buffer,
@@ -313,12 +313,12 @@ impl ScalingRenderer2d {
         render_pass.draw_indexed(0..6, 0, 0..1);
     }
 
-    pub fn get_color_array(&mut self, ctx: &Instance) -> ColorArray {
+    pub fn canvas(&mut self, ctx: &Instance) -> Canvas {
         let (need_resize, (width, height)) = Self::need_resize_size(ctx, &self.config);
         if need_resize {
             self.texture = Self::create_texture(ctx, &mut self.config).0;
         }
         let texture_source = self.config.texture_source.as_mut().expect("Self::create_texture should initialize self.config.texture_source to Some()");
-        ColorArray::new(texture_source, width, height)
+        Canvas::from_texture_source(texture_source, width, height)
     }
 }

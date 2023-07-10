@@ -8,6 +8,8 @@ pub enum Error {
     DeviceAcquisition(wgpu::RequestDeviceError),
     #[error("Surface texture acquisition error: {0}")]
     SurfaceTextureAcquisition(wgpu::SurfaceError),
+    #[error("Image loading error: {0}")]
+    ImageLoading(image::ImageError),
 }
 
 impl From<self::Error> for nano::Error {

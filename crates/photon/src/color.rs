@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Color {
@@ -15,19 +17,46 @@ impl Into<wgpu::Color> for Color {
     }
 }
 
-pub struct ColorArray<'a> {
-    pub array: &'a mut [Color],
+pub struct Canvas<'a, T: AsMut<[Color]> = &'a mut [Color]> {
+    _marker: PhantomData<&'a ()>,
+    pub array: T,
     pub width: u32,
     pub height: u32,
 }
 
-impl<'a> ColorArray<'a> {
-    pub fn new(array: &'a mut [Color], width: u32, height: u32) -> Self {
+impl<'a> Canvas<'a> {
+    pub fn from_texture_source(texture_source: &'a mut [Color], width: u32, height: u32) -> Self {
         Self {
-            array,
+            _marker: PhantomData,
+            array: texture_source,
             width,
             height,
         }
+    }
+
+    pub fn load_from_file(
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Canvas<'a, Box<[Color]>>, crate::Error> {
+        let image = image::open(path).map_err(crate::Error::ImageLoading)?;
+        let image = image.to_rgba32f();
+        let (width, height) = image.dimensions();
+        let array = image
+            .into_raw()
+            .chunks_exact(4)
+            .map(|rgba| Color {
+                r: rgba[0],
+                g: rgba[1],
+                b: rgba[2],
+                a: rgba[3],
+            })
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
+        Ok(Canvas {
+            _marker: PhantomData,
+            array,
+            width,
+            height,
+        })
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Color> {
