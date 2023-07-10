@@ -259,6 +259,7 @@ impl ScalingRenderer2d {
         (texture, bind_group_layout, bind_group)
     }
 
+
     pub fn draw(&mut self, ctx: &Instance, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
         let (need_resize, (width, height)) = Self::need_resize_size(ctx, &self.config);
         if need_resize {
@@ -317,12 +318,7 @@ impl ScalingRenderer2d {
         if need_resize {
             self.texture = Self::create_texture(ctx, &mut self.config).0;
         }
-        let pixel_count = (width * height) as usize;
         let texture_source = self.config.texture_source.as_mut().expect("Self::create_texture should initialize self.config.texture_source to Some()");
-        ColorArray {
-            array: &mut texture_source[..pixel_count],
-            width,
-            height,
-        }
+        ColorArray::new(texture_source, width, height)
     }
 }

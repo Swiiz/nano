@@ -22,6 +22,14 @@ pub struct ColorArray<'a> {
 }
 
 impl<'a> ColorArray<'a> {
+    pub fn new(array: &'a mut [Color], width: u32, height: u32) -> Self {
+        Self {
+            array,
+            width,
+            height,
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Color> {
         self.array.iter()
     }
@@ -62,6 +70,16 @@ impl<'a> ColorArray<'a> {
         for y in y..y + height {
             for x in x..x + width {
                 self.set(x, y, color);
+            }
+        }
+    }
+
+    pub fn blit(&mut self, x: u32, y: u32, source: &Self) {
+        for sy in 0..source.height {
+            for sx in 0..source.width {
+                if let Some(color) = source.get(x, y) {
+                    self.set(x + sx, y + sy, *color);
+                }
             }
         }
     }

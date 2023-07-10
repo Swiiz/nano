@@ -3,7 +3,7 @@ use std::rc::Rc;
 use nano::*;
 use photon::{
     renderers::{ScalingRenderer2d, ScalingRenderer2dConfig},
-    wgpu, Color,
+    Color,
 };
 
 fn main() -> Result<()> {
@@ -44,12 +44,35 @@ impl nano::Game for ExampleWithPhoton {
     fn on(&mut self, context: Context, event: nano::Event) -> nano::Result<()> {
         match event {
             nano::Event::Draw => {
-                self.render()?;
-                println!("Draw!");
+                let mut pixels = self.scaling_renderer.get_color_array(&self.graphics);
+                let mut i = 0;
+                // Draw gradient lines
+                for Color { r, g, b, a: _ } in pixels.iter_mut() {
+                    i = (i + 1) % 255;
+                    *r = (i) as f32 / 255.0;
+                    *g = ((i + 75) % 255) as f32 / 255.0;
+                    *b = ((i + 150) % 255) as f32 / 255.0;
+                }
+                // Draw a red square
+                pixels.fill(
+                    0,
+                    0,
+                    10,
+                    10,
+                    Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },
+                );
+
+                self.graphics.render(|ctx, frame| {
+                    self.scaling_renderer.draw(ctx, frame.encoder, frame.view)
+                })?;
             }
             nano::Event::Update => {
                 self.window.request_redraw();
-                println!("Update!");
             }
             nano::Event::CloseRequested { window_id } => {
                 if window_id == self.window.id() {
@@ -65,35 +88,6 @@ impl nano::Game for ExampleWithPhoton {
                 }
             }
         }
-        Ok(())
-    }
-}
-
-impl ExampleWithPhoton {
-    fn render(&mut self) -> Result<()> {
-        let mut pixels = self.scaling_renderer.get_color_array(&self.graphics);
-        let mut i = 0;
-        for Color { r, g, b, a: _ } in pixels.iter_mut() {
-            i = (i + 1) % 255;
-            *r = (i) as f32 / 255.0;
-            *g = ((i + 75) % 255) as f32 / 255.0;
-            *b = ((i + 150) % 255) as f32 / 255.0;
-        }
-        pixels.fill(
-            0,
-            0,
-            10,
-            10,
-            Color {
-                r: 1.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            },
-        );
-
-        self.graphics
-            .render(|ctx, frame| self.scaling_renderer.draw(ctx, frame.encoder, frame.view))?;
         Ok(())
     }
 }
