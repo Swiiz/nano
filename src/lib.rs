@@ -3,15 +3,13 @@ mod event;
 mod host;
 mod window;
 
-pub use error::Error;
+pub use error::*;
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub use host::Host;
+pub use host::*;
+pub use window::*;
 
-pub use window::Window;
-
-pub use event::Event;
-
+pub use event::*;
 pub use winit::event_loop::ControlFlow;
 
 pub struct Context<'a> {
@@ -29,7 +27,7 @@ pub trait Game: Sized + 'static {
 }
 
 pub fn run<T: Game>() -> Result<()> {
-    let engine = Host::new();
+    let mut engine = Host::new();
     let mut user_state = T::new(&engine)?;
     let (start, mut last_update, mut last_draw) = (
         std::time::Instant::now(),

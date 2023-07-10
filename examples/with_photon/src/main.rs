@@ -13,11 +13,14 @@ struct ExampleWithPhoton {
     scaling_renderer: ScalingRenderer2d,
 }
 
-const DOWNSAMPLING: u32 = 10;
+const CANVAS_TO_SCREEN_RATIO: u32 = 10;
 
 fn compute_scaled_size(window: &Window) -> (u32, u32) {
     let (width, height): (u32, u32) = window.inner_size().into();
-    let (width, height) = (width / DOWNSAMPLING, height / DOWNSAMPLING);
+    let (width, height) = (
+        width / CANVAS_TO_SCREEN_RATIO,
+        height / CANVAS_TO_SCREEN_RATIO,
+    );
     (width, height)
 }
 

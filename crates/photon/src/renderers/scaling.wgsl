@@ -29,5 +29,7 @@ var sam: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(tex, sam, in.tex_coords);
+    var rgb_color: vec3<f32> = textureSample(tex, sam, in.tex_coords).xyz;
+    var srgb_color: vec3<f32> = pow(rgb_color.xyz, vec3<f32>(2.2));
+    return vec4<f32>(srgb_color, 1.0);
 }

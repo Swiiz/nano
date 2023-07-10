@@ -168,12 +168,69 @@ impl Canvas {
         }
     }
 
-    pub fn blit(&mut self, x: u32, y: u32, source: &Self) {
+    pub fn blit(&mut self, x: u32, y: u32, source: &Self, blend_mode: BlendMode) {
         for sy in 0..source.height {
             for sx in 0..source.width {
-                if let Some(color) = source.get(x, y) {
-                    self.set(x + sx, y + sy, *color);
+                if let Some(color) = source.get(sx, sy) {
+                    self.set(
+                        x + sx,
+                        y + sy,
+                        blend_mode.blend(*color, *self.get(x + sx, y + sy).unwrap()),
+                    );
                 }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum BlendMode {
+    None,
+    Alpha,
+    Add,
+}
+
+impl BlendMode {
+    pub fn blend(&self, first: Color, second: Color) -> Color {
+        match self {
+            BlendMode::None => first,
+            BlendMode::Alpha => {
+                let Color {
+                    r: r1,
+                    g: g1,
+                    b: b1,
+                    a: a1,
+                } = first;
+                let Color {
+                    r: r2,
+                    g: g2,
+                    b: b2,
+                    a: a2,
+                } = second;
+                let a = a1 + a2 * (1.0 - a1);
+                let r = (r1 * a1 + r2 * a2 * (1.0 - a1)) / a;
+                let g = (g1 * a1 + g2 * a2 * (1.0 - a1)) / a;
+                let b = (b1 * a1 + b2 * a2 * (1.0 - a1)) / a;
+                Color { r, g, b, a }
+            }
+            BlendMode::Add => {
+                let Color {
+                    r: r1,
+                    g: g1,
+                    b: b1,
+                    a: a1,
+                } = first;
+                let Color {
+                    r: r2,
+                    g: g2,
+                    b: b2,
+                    a: a2,
+                } = second;
+                let a = a1 + a2;
+                let r = (r1 * a1 + r2 * a2) / a;
+                let g = (g1 * a1 + g2 * a2) / a;
+                let b = (b1 * a1 + b2 * a2) / a;
+                Color { r, g, b, a }
             }
         }
     }

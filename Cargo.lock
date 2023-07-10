@@ -478,6 +478,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f43be4fe21a13b9781a69afa4985b0f6ee0e1afab2c6f454a8cf30e2b2237b6e"
 
 [[package]]
+name = "generational-arena"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877e94aff08e743b651baaea359664321055749b398adff8740a7399af7796e7"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -878,6 +887,7 @@ dependencies = [
 name = "nano"
 version = "0.1.0"
 dependencies = [
+ "generational-arena",
  "thiserror",
  "winit",
 ]

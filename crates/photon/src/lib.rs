@@ -7,6 +7,7 @@ pub use color::*;
 pub use error::*;
 pub use wgpu;
 pub mod renderers;
+
 pub struct Gpu {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
