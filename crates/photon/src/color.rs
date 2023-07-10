@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Color {
@@ -7,6 +5,57 @@ pub struct Color {
     pub g: f32,
     pub b: f32,
     pub a: f32,
+}
+
+impl Color {
+    pub const BLACK: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    pub const WHITE: Self = Self {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
+    pub const RED: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    pub const GREEN: Self = Self {
+        r: 0.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    pub const BLUE: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+    };
+    pub const YELLOW: Self = Self {
+        r: 1.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+    };
+    pub const CYAN: Self = Self {
+        r: 0.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
+    pub const MAGENTA: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+    };
 }
 
 impl Into<wgpu::Color> for Color {
@@ -17,30 +66,26 @@ impl Into<wgpu::Color> for Color {
     }
 }
 
-pub struct Canvas<'a, T: AsMut<[Color]> = &'a mut [Color]> {
-    _marker: PhantomData<&'a ()>,
-    pub array: T,
+pub struct Canvas {
+    pub data: Vec<Color>,
     pub width: u32,
     pub height: u32,
 }
 
-impl<'a> Canvas<'a> {
-    pub fn from_texture_source(texture_source: &'a mut [Color], width: u32, height: u32) -> Self {
+impl Canvas {
+    pub fn new(width: u32, height: u32, color: Color) -> Self {
         Self {
-            _marker: PhantomData,
-            array: texture_source,
+            data: vec![color; (width * height) as usize],
             width,
             height,
         }
     }
 
-    pub fn load_from_file(
-        path: impl AsRef<std::path::Path>,
-    ) -> Result<Canvas<'a, Box<[Color]>>, crate::Error> {
+    pub fn load_from_file(path: impl AsRef<std::path::Path>) -> Result<Canvas, crate::Error> {
         let image = image::open(path).map_err(crate::Error::ImageLoading)?;
         let image = image.to_rgba32f();
         let (width, height) = image.dimensions();
-        let array = image
+        let data = image
             .into_raw()
             .chunks_exact(4)
             .map(|rgba| Color {
@@ -49,27 +94,30 @@ impl<'a> Canvas<'a> {
                 b: rgba[2],
                 a: rgba[3],
             })
-            .collect::<Vec<_>>()
-            .into_boxed_slice();
+            .collect::<Vec<_>>();
         Ok(Canvas {
-            _marker: PhantomData,
-            array,
+            data,
             width,
             height,
         })
     }
 
+    pub fn size_matches(&self, width: u32, height: u32) -> bool {
+        assert!(self.data.len() == (self.width * self.height) as usize);
+        self.width == width && self.height == height
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &Color> {
-        self.array.iter()
+        self.data.iter()
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> {
-        self.array.iter_mut()
+        self.data.iter_mut()
     }
 
     pub fn get(&self, x: u32, y: u32) -> Option<&Color> {
         if x < self.width && y < self.height {
-            Some(&self.array[(y * self.width + x) as usize])
+            Some(&self.data[(y * self.width + x) as usize])
         } else {
             None
         }
@@ -77,7 +125,7 @@ impl<'a> Canvas<'a> {
 
     pub fn get_mut(&mut self, x: u32, y: u32) -> Option<&mut Color> {
         if x < self.width && y < self.height {
-            Some(&mut self.array[(y * self.width + x) as usize])
+            Some(&mut self.data[(y * self.width + x) as usize])
         } else {
             None
         }
@@ -90,9 +138,26 @@ impl<'a> Canvas<'a> {
     }
 
     pub fn clear(&mut self, color: Color) {
-        for c in self.array.iter_mut() {
+        for c in self.data.iter_mut() {
             *c = color;
         }
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32, color: Color) {
+        if self.size_matches(width, height) {
+            return;
+        }
+        let mut new_data = vec![color; (width * height) as usize];
+        for (row_idx, row) in self.data.chunks_exact(self.width as usize).enumerate() {
+            for (i, c) in row.iter().enumerate() {
+                if i < width as usize && row_idx < height as usize {
+                    new_data[(row_idx * width as usize + i) as usize] = *c;
+                }
+            }
+        }
+        self.width = width;
+        self.height = height;
+        self.data = new_data;
     }
 
     pub fn fill(&mut self, x: u32, y: u32, width: u32, height: u32, color: Color) {

@@ -7,37 +7,16 @@ pub struct ScalingRenderer2d {
     render_pipeline: wgpu::RenderPipeline,
     texture: wgpu::Texture,
     texture_bind_group: wgpu::BindGroup,
-    pub config: ScalingRenderer2dConfig,
-}
-
-pub struct ScalingRenderer2dConfig {
+    pub canvas: Canvas,
     pub background_color: Color,
-    /// How many time smaller should the texture_source len be compared to width * height
-    pub upsampling_ratio: u32,
-    pub texture_source: Option<Box<[Color]>>
-}
-
-impl Default for ScalingRenderer2dConfig {
-    fn default() -> Self {
-        Self {
-            background_color: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
-                a: 1.0,
-            },
-            upsampling_ratio: 1,
-            texture_source: None,
-        }
-    }
 }
 
 impl ScalingRenderer2d {
-    pub fn new(ctx: &Instance, mut config: ScalingRenderer2dConfig) -> Result<Self, crate::Error> {
+    pub fn new(graphics: &Instance, canvas: Canvas, background_color: Color) -> Result<Self, crate::Error> {
         let shader = wgpu::include_wgsl!("scaling.wgsl");
-        let module = ctx.gpu.device.create_shader_module(shader);
+        let module = graphics.gpu.device.create_shader_module(shader);
 
-        let (texture, texture_bind_group_layout, texture_bind_group) = Self::create_texture(ctx, &mut config);
+        let (texture, texture_bind_group_layout, texture_bind_group) = Self::create_texture(graphics, canvas.width, canvas.height);
 
         let vertex_data: [f32; 16] = [
             //[x, y, u, v]
@@ -50,7 +29,7 @@ impl ScalingRenderer2d {
         let index_data = [0u16, 1, 2, 0, 2, 3];
 
         let vertex_buffer = wgpu::util::DeviceExt::create_buffer_init(
-            &ctx.gpu.device,
+            &graphics.gpu.device,
             &wgpu::util::BufferInitDescriptor {
                 label: Some("scaling_renderer_2d_vertex_buffer"),
                 contents: 
@@ -66,7 +45,7 @@ impl ScalingRenderer2d {
         );
 
         let index_buffer = wgpu::util::DeviceExt::create_buffer_init(
-            &ctx.gpu.device,
+            &graphics.gpu.device,
             &wgpu::util::BufferInitDescriptor {
                 label: Some("scaling_renderer_2d_index_buffer"),
                 contents: 
@@ -82,7 +61,7 @@ impl ScalingRenderer2d {
         );
 
         let render_pipeline_layout =
-            ctx.gpu
+            graphics.gpu
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("scaling_renderer_2d_pipeline_layout"),
@@ -91,7 +70,7 @@ impl ScalingRenderer2d {
                 });
 
         let render_pipeline =
-            ctx.gpu
+            graphics.gpu
                 .device
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: Some("scaling_renderer_2d_render_pipeline"),
@@ -120,7 +99,7 @@ impl ScalingRenderer2d {
                         module: &module,
                         entry_point: "fs_main",
                         targets: &[Some(wgpu::ColorTargetState {
-                            format: ctx.surface_texture_format,
+                            format: graphics.surface_texture_format,
                             blend: Some(wgpu::BlendState::REPLACE),
                             write_mask: wgpu::ColorWrites::ALL,
                         })],
@@ -149,45 +128,18 @@ impl ScalingRenderer2d {
             render_pipeline,
             texture,
             texture_bind_group,
-            config,
+            canvas,
+            background_color,
         })
     }
 
-    fn need_resize_size(ctx: &Instance, config: &ScalingRenderer2dConfig) -> (bool, (u32, u32)) {
-        let (w_width, w_height): (u32, u32) = ctx.window.inner_size().into();
-        let tex_dims = (w_width / config.upsampling_ratio, w_height / config.upsampling_ratio);
-        let pixel_count = (tex_dims.0 * tex_dims.1) as usize;
-        (config.texture_source.is_none() || config.texture_source.as_ref().unwrap().len() != pixel_count, tex_dims)
-    }
-
-    fn create_texture(ctx: &Instance, config: &mut ScalingRenderer2dConfig) -> (wgpu::Texture, wgpu::BindGroupLayout, wgpu::BindGroup) {
-        let (need_resize, (width, height)) = Self::need_resize_size(ctx, config);
-        let pixel_count = (width * height) as usize;
-        match &mut config.texture_source {
-            None => {
-                config.texture_source = Some(vec![Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 1.0,
-                }; pixel_count].into_boxed_slice());
-                
-            }
-            Some(array) => {
-                if need_resize {
-                    let mut vec = array.clone().into_vec();
-                    vec.resize(pixel_count, Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0});
-                    *array = vec.into_boxed_slice();
-                }
-            }
-        }
-        
+    fn create_texture(graphics: &Instance, width: u32, height: u32) -> (wgpu::Texture, wgpu::BindGroupLayout, wgpu::BindGroup) {
         let texture_size = wgpu::Extent3d {
             width,
             height,
             depth_or_array_layers: 1,
         };
-        let texture = ctx.gpu.device.create_texture(
+        let texture = graphics.gpu.device.create_texture(
             &wgpu::TextureDescriptor {
                 size: texture_size,
                 mip_level_count: 1,
@@ -201,7 +153,7 @@ impl ScalingRenderer2d {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = ctx.gpu.device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = graphics.gpu.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("scaling_renderer_2d_sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -217,7 +169,7 @@ impl ScalingRenderer2d {
         });
 
         let bind_group_layout =
-            ctx.gpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            graphics.gpu.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -239,7 +191,7 @@ impl ScalingRenderer2d {
                 label: Some("scaling_renderer_2d_texture_bind_group_layout"),
             });
 
-            let bind_group = ctx.gpu.device.create_bind_group(
+            let bind_group = graphics.gpu.device.create_bind_group(
                 &wgpu::BindGroupDescriptor {
                     layout: &bind_group_layout,
                     entries: &[
@@ -259,66 +211,61 @@ impl ScalingRenderer2d {
         (texture, bind_group_layout, bind_group)
     }
 
-
-    pub fn draw(&mut self, ctx: &Instance, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
-        let (need_resize, (width, height)) = Self::need_resize_size(ctx, &self.config);
-        if need_resize {
-            self.texture = Self::create_texture(ctx, &mut self.config).0;
-        }
-        let texture_source = self.config.texture_source.as_ref().expect("Self::create_texture should initialize self.config.texture_source to Some()");
-        ctx.gpu.queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &self.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            // SAFETY: Safe as long as self.config.texture_source is an array of the same size as the texture and is made of 4x 32 float color
-            unsafe {
-                std::slice::from_raw_parts(
-                    texture_source.as_ptr() as *const u8,
-                    texture_source.len() * std::mem::size_of::<Color>(),
-                )
-            },
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * std::mem::size_of::<f32>() as u32 * width),
-                rows_per_image: Some(height),
-            },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-        );
-        
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("scaling_renderer_2d_render_pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(self.config.background_color.into()),
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment: None,
-        });
-
-        render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
-        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-
-        render_pass.draw_indexed(0..6, 0, 0..1);
+    pub fn resize_canvas(&mut self, graphics: &Instance, width: u32, height: u32) {
+            if !self.canvas.size_matches(width, height) {
+                self.canvas.resize(width, height, self.background_color);
+                let (texture, _, bind_group) = Self::create_texture(graphics, width, height);
+                self.texture = texture;
+                self.texture_bind_group = bind_group;
+            }
     }
 
-    pub fn canvas(&mut self, ctx: &Instance) -> Canvas {
-        let (need_resize, (width, height)) = Self::need_resize_size(ctx, &self.config);
-        if need_resize {
-            self.texture = Self::create_texture(ctx, &mut self.config).0;
-        }
-        let texture_source = self.config.texture_source.as_mut().expect("Self::create_texture should initialize self.config.texture_source to Some()");
-        Canvas::from_texture_source(texture_source, width, height)
+    pub fn draw(&mut self, graphics: &Instance, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
+            graphics.gpu.queue.write_texture(
+                wgpu::ImageCopyTexture {
+                    texture: &self.texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                // SAFETY: Safe as long as canvas.data is an array of the same size as the texture and is made of 4x 32 float color
+                unsafe {
+                    std::slice::from_raw_parts(
+                        self.canvas.data.as_ptr() as *const u8,
+                        self.canvas.data.len() * std::mem::size_of::<Color>(),
+                    )
+                },
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * std::mem::size_of::<f32>() as u32 * self.canvas.width),
+                    rows_per_image: Some(self.canvas.height),
+                },
+                wgpu::Extent3d {
+                    width: self.canvas.width,
+                    height: self.canvas.height,
+                    depth_or_array_layers: 1,
+                },
+            );
+            
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("scaling_renderer_2d_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(self.background_color.into()),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
+    
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+    
+            render_pass.draw_indexed(0..6, 0, 0..1);
+        
     }
 }
