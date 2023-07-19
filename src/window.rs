@@ -1,4 +1,5 @@
 use std::ops::Deref;
+pub use winit;
 
 use winit::{event::Event, event_loop::ControlFlow};
 
@@ -24,7 +25,7 @@ impl WindowHost {
     ) -> crate::Result<()> {
         self.event_loop.run(move |event, _, control_flow| {
             handle_event(&event, control_flow).unwrap_or_else(|e| {
-                eprintln!("Your game errored: {:?}", e);
+                eprintln!("[Nano] Your game errored: {:?}", e);
                 *control_flow = ControlFlow::Exit;
             });
         })

@@ -1,3 +1,7 @@
+use std::{collections::HashMap, path::Path};
+
+use crate::Error;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Color {
@@ -56,6 +60,14 @@ impl Color {
         b: 1.0,
         a: 1.0,
     };
+
+    pub const fn new(r: f32, g: f32, b: f32) -> Self {
+        Self { r, g, b, a: 1.0 }
+    }
+
+    pub const fn new_alpha(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Self { r, g, b, a }
+    }
 }
 
 impl Into<wgpu::Color> for Color {
@@ -137,10 +149,13 @@ impl Canvas {
         }
     }
 
+    /// set method without checking if the pixel is in bounds, might panic!
+    pub fn set_unchecked(&mut self, x: u32, y: u32, color: Color) {
+        self.data[(y * self.width + x) as usize] = color;
+    }
+
     pub fn clear(&mut self, color: Color) {
-        for c in self.data.iter_mut() {
-            *c = color;
-        }
+        self.data = vec![color; (self.width * self.height) as usize];
     }
 
     pub fn resize(&mut self, width: u32, height: u32, color: Color) {
@@ -168,15 +183,19 @@ impl Canvas {
         }
     }
 
-    pub fn blit(&mut self, x: u32, y: u32, source: &Self, blend_mode: BlendMode) {
+    pub fn blit(&mut self, x: i32, y: i32, source: &Self, blend_mode: BlendMode) {
         for sy in 0..source.height {
             for sx in 0..source.width {
                 if let Some(color) = source.get(sx, sy) {
-                    self.set(
-                        x + sx,
-                        y + sy,
-                        blend_mode.blend(*color, *self.get(x + sx, y + sy).unwrap()),
-                    );
+                    let (x, y) = (x + sx as i32, y + sy as i32);
+                    if x >= 0 && y >= 0 && x < self.width as i32 && y < self.height as i32 {
+                        let (x, y) = (x as u32, y as u32);
+                        self.set_unchecked(
+                            x,
+                            y,
+                            blend_mode.blend(*color, *self.get(x, y).unwrap()),
+                        );
+                    }
                 }
             }
         }
@@ -233,5 +252,47 @@ impl BlendMode {
                 Color { r, g, b, a }
             }
         }
+    }
+}
+
+pub struct CanvasLoader {
+    loaded: HashMap<String, Canvas>,
+}
+
+fn path_ref_as_owned_str(path: impl AsRef<Path>) -> String {
+    path.as_ref()
+        .to_str()
+        .expect("Path could not be decoded to string correctly")
+        .to_owned()
+}
+
+impl CanvasLoader {
+    pub fn new() -> Self {
+        CanvasLoader {
+            loaded: Default::default(),
+        }
+    }
+
+    pub fn is_loaded(&self, path: impl AsRef<Path>) -> bool {
+        self.loaded.contains_key(&path_ref_as_owned_str(path))
+    }
+
+    pub fn get_loaded(&self, path: impl AsRef<Path>) -> Option<&Canvas> {
+        self.loaded.get(&path_ref_as_owned_str(path))
+    }
+
+    pub fn pre_load(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
+        let path = path.as_ref();
+        self.loaded
+            .insert(path_ref_as_owned_str(path), Canvas::load_from_file(path)?);
+        Ok(())
+    }
+
+    pub fn get_or_load(&mut self, path: impl AsRef<Path>) -> Result<&Canvas, Error> {
+        let path = path.as_ref();
+        if !self.is_loaded(path) {
+            self.pre_load(path)?;
+        }
+        Ok(self.get_loaded(path).unwrap())
     }
 }

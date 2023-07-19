@@ -1,5 +1,7 @@
 use thiserror::*;
 
+pub type Result<T, E = Error> = core::result::Result<T, E>;
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Window creation error: {0}")]

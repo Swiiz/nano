@@ -1,9 +1,9 @@
-mod color;
+mod canvas;
 mod error;
 
 use std::ops::Deref;
 
-pub use color::*;
+pub use canvas::*;
 pub use error::*;
 pub use wgpu;
 pub mod renderers;
