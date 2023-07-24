@@ -8,6 +8,9 @@ pub use error::*;
 pub use wgpu;
 pub mod renderers;
 
+#[cfg(feature = "imgui")]
+pub use imgui;
+
 pub struct Gpu {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,

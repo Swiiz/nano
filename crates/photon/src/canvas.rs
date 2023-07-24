@@ -62,11 +62,11 @@ impl Color {
         a: 1.0,
     };
 
-    pub const fn new(r: f32, g: f32, b: f32) -> Self {
+    pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b, a: 1.0 }
     }
 
-    pub const fn new_alpha(r: f32, g: f32, b: f32, a: f32) -> Self {
+    pub const fn rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 
@@ -137,6 +137,14 @@ impl Canvas {
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> {
         self.data.iter_mut()
+    }
+
+    pub fn iter_rows(&self) -> impl Iterator<Item = &[Color]> {
+        self.data.chunks_exact(self.width as usize)
+    }
+
+    pub fn iter_rows_mut(&mut self) -> impl Iterator<Item = &mut [Color]> {
+        self.data.chunks_exact_mut(self.width as usize)
     }
 
     pub fn get(&self, x: u32, y: u32) -> Option<&Color> {
