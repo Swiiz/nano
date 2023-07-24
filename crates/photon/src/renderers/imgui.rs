@@ -1,4 +1,3 @@
-pub use imgui;
 use imgui::Ui;
 
 pub struct ImguiRenderer {
