@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use nano::*;
-use photon::{renderers::ScalingRenderer2d, Canvas, Color};
+use photon::{renderers::scaling::ScalingRenderer2d, Canvas, Color};
 
 fn main() -> Result<()> {
     nano::run::<ExampleWithPhoton>()
@@ -44,7 +44,7 @@ impl nano::Game for ExampleWithPhoton {
 
     fn on(&mut self, context: Context, event: &nano::Event) -> nano::Result<()> {
         match event {
-            nano::Event::Draw => {
+            nano::Event::RedrawRequested(_) => {
                 let canvas = &mut self.scaling_renderer.canvas;
                 let mut i = context.start.elapsed().as_millis() / 50;
                 // Draw gradient lines
@@ -57,34 +57,39 @@ impl nano::Game for ExampleWithPhoton {
                 // Draw a yellow square
                 canvas.fill(0, 0, 10, 10, Color::YELLOW);
 
-                self.graphics.render(|graphics, frame| {
-                    self.scaling_renderer
-                        .draw(graphics, frame.encoder, frame.view)
+                self.graphics.render(|graphics, mut frame| {
+                    let mut render_pass = frame.render_pass(Color::BLACK);
+                    self.scaling_renderer.draw(graphics, &mut render_pass);
+                    Ok(())
                 })?;
             }
-            nano::Event::Update => {
+            nano::Event::MainEventsCleared => {
                 self.window.request_redraw();
             }
-            nano::Event::CloseRequested { window_id } => {
-                if window_id == &self.window.id() {
-                    context.control_flow.set_exit();
-                }
-            }
-            nano::Event::WindowResize {
-                window_id,
-                new_size,
+            nano::Event::WindowEvent {
+                event, window_id, ..
             } => {
-                if window_id == &self.window.id() {
-                    self.graphics.resize_surface(*new_size);
-                    let (canvas_width, canvas_height) = compute_scaled_size(&self.window);
-                    self.scaling_renderer.resize_canvas(
-                        &self.graphics,
-                        canvas_width,
-                        canvas_height,
-                    );
+                if *window_id == self.window.id() {
+                    match event {
+                        WindowEvent::Resized(size) => self.on_resize((*size).into()),
+                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                            self.on_resize((**new_inner_size).into())
+                        }
+                        _ => {}
+                    }
                 }
             }
+            _ => {}
         }
         Ok(())
+    }
+}
+
+impl ExampleWithPhoton {
+    fn on_resize(&mut self, new_size: (u32, u32)) {
+        self.graphics.resize_surface(new_size);
+        let (canvas_width, canvas_height) = compute_scaled_size(&self.window);
+        self.scaling_renderer
+            .resize_canvas(&self.graphics, canvas_width, canvas_height);
     }
 }

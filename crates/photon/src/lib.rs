@@ -52,7 +52,7 @@ impl<W: std::ops::Deref<Target = nano::Window>> Instance<W> {
             .formats
             .iter()
             .copied()
-            .find(|f| f.is_srgb())
+            .find(|f| f.describe().srgb)
             .unwrap_or(surface_caps.formats[0]);
 
         Ok(Self {
@@ -81,7 +81,10 @@ impl<W: std::ops::Deref<Target = nano::Window>> Instance<W> {
         }
     }
 
-    pub fn render(&mut self, renderfunc: impl FnOnce(&Instance<W>, Frame<W>)) -> Result<(), Error> {
+    pub fn render(
+        &mut self,
+        renderfunc: impl FnOnce(&Instance<W>, Frame<W>) -> Result<(), Error>,
+    ) -> Result<(), Error> {
         let (w, h): (u32, u32) = self.window.inner_size().into();
         if w == 0 || h == 0 {
             return Ok(());
@@ -113,7 +116,7 @@ impl<W: std::ops::Deref<Target = nano::Window>> Instance<W> {
                 view: &view,
                 context: self,
             },
-        );
+        )?;
         self.gpu.queue.submit(std::iter::once(encoder.finish()));
         surface_texture.present();
         Ok(())
@@ -124,4 +127,21 @@ pub struct Frame<'a, W: Deref<Target = nano::Window>> {
     pub encoder: &'a mut wgpu::CommandEncoder,
     pub view: &'a wgpu::TextureView,
     pub context: &'a Instance<W>,
+}
+
+impl<'a, W: Deref<Target = nano::Window>> Frame<'a, W> {
+    pub fn render_pass<'b>(&'b mut self, clear_color: Color) -> wgpu::RenderPass<'b> {
+        self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                resolve_target: None,
+                view: self.view,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(clear_color.into()),
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        })
+    }
 }

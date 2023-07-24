@@ -4,6 +4,7 @@ use crate::Error;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Color {
     pub r: f32,
     pub g: f32,
@@ -68,6 +69,10 @@ impl Color {
     pub const fn new_alpha(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
+
+    pub fn as_mut(&mut self) -> &mut [f32; 4] {
+        unsafe { &mut *(self as *mut Self as *mut [f32; 4]) }
+    }
 }
 
 impl Into<wgpu::Color> for Color {
@@ -75,6 +80,13 @@ impl Into<wgpu::Color> for Color {
         let Color { r, g, b, a } = self;
         let (r, g, b, a) = (r as f64, g as f64, b as f64, a as f64);
         wgpu::Color { r, g, b, a }
+    }
+}
+
+impl Into<[f32; 4]> for Color {
+    fn into(self) -> [f32; 4] {
+        let Color { r, g, b, a } = self;
+        [r, g, b, a]
     }
 }
 

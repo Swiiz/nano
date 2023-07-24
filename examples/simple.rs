@@ -14,18 +14,13 @@ impl nano::Game for ExampleGame {
         Ok(Self { window })
     }
 
-    fn on(&mut self, context: Context, event: &nano::Event) -> nano::Result<()> {
+    fn on(&mut self, _: Context, event: &nano::Event) -> nano::Result<()> {
         match event {
-            nano::Event::Draw => {
+            nano::Event::RedrawRequested(_) => {
                 println!("Draw!");
             }
-            nano::Event::Update => {
+            nano::Event::MainEventsCleared => {
                 println!("Update!");
-            }
-            nano::Event::CloseRequested { window_id } => {
-                if window_id == &self.window.id() {
-                    context.control_flow.set_exit();
-                }
             }
             _ => {}
         }

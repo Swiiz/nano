@@ -1,4 +1,5 @@
 use crate::{Canvas, Color, Instance};
+use std::num::NonZeroU32;
 
 pub struct ScalingRenderer2d {
     vertex_buffer: wgpu::Buffer,
@@ -176,7 +177,7 @@ impl ScalingRenderer2d {
                 lod_min_clamp: 0.0,
                 lod_max_clamp: 1.0,
                 compare: None,
-                anisotropy_clamp: 1,
+                anisotropy_clamp: Some(std::num::NonZeroU8::new(1).unwrap()),
                 border_color: None,
             });
 
@@ -236,12 +237,7 @@ impl ScalingRenderer2d {
         }
     }
 
-    pub fn draw(
-        &mut self,
-        graphics: &Instance,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-    ) {
+    pub fn draw<'a>(&'a mut self, graphics: &Instance, render_pass: &mut wgpu::RenderPass<'a>) {
         graphics.gpu.queue.write_texture(
             wgpu::ImageCopyTexture {
                 texture: &self.texture,
@@ -258,8 +254,11 @@ impl ScalingRenderer2d {
             },
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(4 * std::mem::size_of::<f32>() as u32 * self.canvas.width),
-                rows_per_image: Some(self.canvas.height),
+                bytes_per_row: Some(
+                    NonZeroU32::new(4 * std::mem::size_of::<f32>() as u32 * self.canvas.width)
+                        .unwrap(),
+                ),
+                rows_per_image: Some(NonZeroU32::new(self.canvas.height).unwrap()),
             },
             wgpu::Extent3d {
                 width: self.canvas.width,
@@ -267,19 +266,6 @@ impl ScalingRenderer2d {
                 depth_or_array_layers: 1,
             },
         );
-
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("scaling_renderer_2d_render_pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(self.background_color.into()),
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment: None,
-        });
 
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
