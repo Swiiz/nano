@@ -7,17 +7,18 @@ use std::any::Any;
 
 pub use anyhow::*;
 pub use better_any::{Tid, TidAble};
-use deps::ReadDeps;
+pub use deps::ReadDeps;
 pub use engine::Engine;
 
-pub type Input<'a, M> = <M as Module>::Input<'a>;
-
-pub trait Module: engine::DynModule + Any {
+pub trait Module: engine::DynModule + Any + Sized {
     type Input<'a>: TidAble<'a>;
-    type Dependencies: deps::Dependencies;
+    type Dependencies: deps::Dependencies<Self>;
 
-    fn run<'a>(&mut self, input: Input<'a, Self>, deps: ReadDeps<Self>) -> Output<'a>;
+    fn run<'a>(&mut self, input: Input<'a, Self>, deps: Deps<Self>) -> Output<'a>;
 }
+
+pub type Input<'a, M> = <M as Module>::Input<'a>;
+pub type Deps<'a, T> = <<T as Module>::Dependencies as deps::Dependencies<T>>::ReadOnly<'a>;
 
 #[derive(Default)]
 pub struct Output<'a> {
@@ -32,14 +33,5 @@ impl<'a> Output<'a> {
     pub fn with<T: TidAble<'a>>(mut self, input: T) -> Output<'a> {
         self.events.push(Box::new(input) as Box<dyn Tid<'a> + 'a>);
         self
-    }
-}
-
-#[derive(Tid)]
-pub struct NoEvent;
-pub use NoEvent as __;
-impl From<()> for NoEvent {
-    fn from(_: ()) -> Self {
-        NoEvent
     }
 }

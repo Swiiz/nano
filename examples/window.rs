@@ -1,4 +1,3 @@
-use deps::ReadDeps;
 use nano7::*;
 use platform::{
     window::{
@@ -11,21 +10,21 @@ use platform::{
 fn main() -> Result<()> {
     let mut engine = Engine::new();
 
-    engine.add_module(ExampleModule::default());
+    engine.add_module(PlatformModule::default());
 
     WindowPlatform.run(engine)
 }
 
 #[derive(Default)]
-pub struct ExampleModule {
-    window: Option<winit::window::Window>,
+pub struct PlatformModule {
+    pub window: Option<winit::window::Window>,
 }
 
-impl Module for ExampleModule {
+impl Module for PlatformModule {
     type Input<'a> = WindowPlatformEvent<'a>;
     type Dependencies = ();
 
-    fn run<'a>(&mut self, input: Input<'a, Self>, deps: ReadDeps<Self>) -> Output<'a> {
+    fn run<'a>(&mut self, input: Input<Self>, _: Deps<Self>) -> Output<'a> {
         match input.event {
             WindowPlatformEventContent::Resumed => {
                 self.window.replace(
@@ -48,15 +47,16 @@ impl Module for ExampleModule {
                         input.event_loop.exit();
                     }
                     WindowEvent::RedrawRequested => {
-                        // Render here...
+                        // Render...
 
                         window.request_redraw();
                     }
                     _ => (),
                 }
             }
+            WindowPlatformEventContent::AboutToWait => {}
             _ => (),
         }
-        Output::default() //TODO: output
+        Output::default()
     }
 }

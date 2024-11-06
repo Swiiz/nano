@@ -1,11 +1,15 @@
-use std::{any::TypeId, collections::HashMap};
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+};
 
 use better_any::{Tid, TidAble, TidExt};
 
-use crate::{deps::Dependencies, Module, NoEvent, Output};
+use crate::{deps::Dependencies, Module, Output};
 
-pub trait DynModule {
+pub trait DynModule: Any {
     fn run_dyn<'a>(&mut self, input: Box<dyn Tid<'a> + 'a>, engine: &Engine) -> Output<'a>;
+    fn as_any(&self) -> &dyn Any;
 }
 impl<T: Module> DynModule for T {
     fn run_dyn<'a>(&mut self, input: Box<dyn Tid<'a> + 'a>, engine: &Engine) -> Output<'a> {
@@ -15,6 +19,10 @@ impl<T: Module> DynModule for T {
             }),
             T::Dependencies::read_deps(engine),
         )
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -52,13 +60,12 @@ impl Engine {
                 .into_iter()
                 .filter_map(|input| {
                     let input_tid = (&*input).self_id();
-                    let module_tid = self.modules_input_tid.get(&input_tid).unwrap();
+                    let module_tid = self
+                        .modules_input_tid
+                        .get(&input_tid)
+                        .expect("Event is missing handler in engine modules");
                     let mut module = self.modules.remove(&module_tid);
-                    let output = module.as_mut().map(|m| {
-                        m.run_dyn(input, self)
-                            .iter()
-                            .filter(|i| i.self_id() != NoEvent.self_id())
-                    });
+                    let output = module.as_mut().map(|m| m.run_dyn(input, self).iter());
                     if module.is_some() {
                         self.modules.insert(module_tid.clone(), module.unwrap());
                     }
@@ -71,5 +78,11 @@ impl Engine {
                 return Ok(());
             }
         }
+    }
+
+    pub fn read_module<M: Module>(&self) -> Option<&M> {
+        self.modules
+            .get(&TypeId::of::<M>())
+            .map(|m| m.as_any().downcast_ref::<M>().unwrap())
     }
 }
