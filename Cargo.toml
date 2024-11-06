@@ -1,0 +1,9 @@
+[package]
+name = "nano7"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.92"
+better_any = { version = "0.2.0", features = ["derive"] }
+winit = "0.30.5"
